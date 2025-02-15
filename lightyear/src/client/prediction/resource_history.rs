@@ -1,11 +1,25 @@
 //! There's a lot of overlap with `client::prediction_history` because resources are components in ECS so rollback is going to look similar.
+use std::any::type_name;
+
 use crate::prelude::{HistoryBuffer, HistoryState, TickManager};
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::info};
 
 use super::rollback::Rollback;
 use crate::shared::tick_manager::TickEvent;
 
 pub(crate) type ResourceHistory<R> = HistoryBuffer<R>;
+
+struct SomeThing;
+
+fn _get_name<T>(_: &T) -> &'static str {
+    std::any::type_name::<T>()
+}
+
+macro_rules! name_struct {
+    ($e:expr) => {
+        _get_name(&$e)
+    };
+}
 
 /// If there is a TickEvent and the client tick suddenly changes, we need
 /// to update the ticks in the history buffer.
@@ -14,12 +28,18 @@ pub(crate) type ResourceHistory<R> = HistoryBuffer<R>;
 /// (i.e. X ticks in the past compared to the current tick)
 pub(crate) fn handle_tick_event_resource_history<R: Resource>(
     trigger: Trigger<TickEvent>,
+    resource: Option<Res<R>>,
     res: Option<ResMut<ResourceHistory<R>>>,
 ) {
     match *trigger.event() {
         TickEvent::TickSnap { old_tick, new_tick } => {
             if let Some(mut history) = res {
-                history.update_ticks(new_tick - old_tick)
+                if name_struct!(resource).contains("WyRand") {
+                    info!(
+                        "Updating resource ticks difference: {:?}",
+                        new_tick - old_tick
+                    );
+                }
             }
         }
     }
@@ -37,6 +57,13 @@ pub(crate) fn update_resource_history<R: Resource + Clone>(
 
     if let Some(resource) = resource {
         if resource.is_changed() {
+            if name_struct!(resource).contains("WyRand") {
+                info!(
+                    "Saving history for resource {:?} in tick: {:?}",
+                    name_struct!(resource),
+                    tick
+                );
+            }
             history.add_update(tick, resource.clone());
         }
     // resource does not exist, it might have been just removed
