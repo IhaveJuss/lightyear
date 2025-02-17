@@ -40,6 +40,10 @@ pub(crate) fn handle_tick_event_resource_history<R: Resource>(
                         new_tick - old_tick
                     );
                 }
+                let tick_difference = new_tick - old_tick;
+                if tick_difference < 0 {
+                    history.update_ticks(new_tick - old_tick)
+                }
             }
         }
     }
